@@ -1,0 +1,35 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.7
+      - name: Unzip newest zip
+        run: |
+          ls -la
+          f=""
+          while IFS= read -r p; do
+            if [ -n "$p" ] && [ -f "$p" ]; then f="$p"; break; fi
+          done < <(git -c core.quotepath=off log --diff-filter=AM --name-only --pretty=format: -- '*.zip')
+          echo "Using: [$f]"
+          test -n "$f"
+          unzip -oq "$f"
+          ls
+      - working-directory: AskRoom
+        run: gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AskRoom-APK
+          path: AskRoom/app/build/outputs/apk/debug/app-debug.apk
